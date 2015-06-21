@@ -20,7 +20,8 @@ figures <- c("Figure 1. \"Sample of data and distribution of am variable\"",
              "Figure 5. \"Linear model with interactions between am and wt\"",
              "Figure 6. \"Interaction plot between am and wt\"",
              "Figure 7. \"Scatterplot of wt and mpg with color representing am\"",
-             "Figure 8. \"Residuals plot and residuals QQ plot\"")
+             "Figure 8. \"Residuals plot and residuals QQ plot\"",
+             "Figure 9. \"95% confidence intervals for the estimates\"")
 
 ```
 
@@ -48,13 +49,10 @@ In this paper we examine the dataset *mtcars* to answer the following questions:
 
 ```{r fits, echo=FALSE}
 # The fitted linear models we examine in this analysis
-
 # The simple linear regression model
 slr.fit          <- lm(mpg ~ am, data = mtcars)
-
 # The model found using step()
 step.fit         <- step(lm(mpg ~ ., data = mtcars), trace = 0)
-
 # The model with an interaction between wt and am
 interactions.fit <- lm(mpg ~ am*wt + qsec, data = mtcars)
 ```
@@ -110,6 +108,8 @@ When we are talking about automatic transmissions, *ammanual* is 0, so we interp
 Note that as *wt* increases, *mpg* decreases and our model shows us that *mpg* decreases faster for manual transmissions (-7.08) than for automatic transmissions (-2.94), which is in agreement with our interactions plot.  But, as we know, the data has biases of lighter cars being manual transmissions and heavier cars being automatic transmissions.
 
 *qsec* has a comparatively simpler interpretation in this model.  On average, for each unit increase in *qsec*, we expect *mpg* to increase by 1.02.  This makes intuitive sense, cars that are a bit slower in accleration are generally thought of as being more fuel efficient.
+
+`r figures[9]` shows the 95% confidence intervals for the estimates in the final model.
 
 ### Conclusion
 
@@ -175,7 +175,23 @@ p2
 
 `r figures[8]`
 
+```{r ci, echo=FALSE}
+# Generating confidence intervals for estimates for the
+# final model with interactions
+coefs <- summary(interactions.fit)$coef; cis <- data.frame()
+for (i in 1:nrow(coefs)) {
+    ci <- coefs[i, 1] + c(-1, 1) * qt(.975, df = interactions.fit$df) * coefs[i, 2]
+    name = dimnames(coefs)[[1]][i][1]
+    cis <- rbind(cis, data.frame(name = name, lower = ci[1], upper = ci[2]))
+}
+print(cis)
+```
+
+`r figures[9]`
+
 ```{r clean, echo=TRUE, results='hide'}
 ```
 ```{r fits, echo=TRUE, results='hide'}
+```
+```{r ci, echo=TRUE, results='hide'}
 ```
