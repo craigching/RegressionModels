@@ -48,8 +48,14 @@ In this paper we examine the dataset *mtcars* to answer the following questions:
 
 ```{r fits, echo=FALSE}
 # The fitted linear models we examine in this analysis
+
+# The simple linear regression model
 slr.fit          <- lm(mpg ~ am, data = mtcars)
+
+# The model found using step()
 step.fit         <- step(lm(mpg ~ ., data = mtcars), trace = 0)
+
+# The model with an interaction between wt and am
 interactions.fit <- lm(mpg ~ am*wt + qsec, data = mtcars)
 ```
 
@@ -111,7 +117,7 @@ Based on our findings, we conclude that we cannot definitively say anything abou
 
 ### Appendix
 
-This document was produced in R Studio using knitr and R markdown.
+This document was produced in R Studio using knitr and R markdown.  To validate anything in this analysis, the source is made available at https://raw.githubusercontent.com/craigching/RegressionModels/master/mtcars_mpg_analysis.Rmd
 
 ```{r sample, echo=FALSE, fig.cap='figure 1'}
 head(mtcars)
