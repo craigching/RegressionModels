@@ -1,0 +1,175 @@
+---
+title: "An Examination of Fuel Efficiency by Transmission Type"
+author: "Craig L. Ching"
+date: "June 14, 2015"
+output:
+  pdf_document:
+    fig_height: 3
+    fig_width: 4
+    latex_engine: xelatex
+---
+
+```{r deps, echo=FALSE, results='hide', fig.show='hide', message=FALSE}
+library(ggplot2)
+library(effects)
+
+figures <- c("Figure 1. \"Sample of data and distribution of am variable\"",
+             "Figure 2. \"Boxplot showing mpg vs am\"",
+             "Figure 3. \"Naive linear model of mpg ~ am\"",
+             "Figure 4. \"Linear model found using step with y ~ .\"",
+             "Figure 5. \"Linear model with interactions between am and wt\"",
+             "Figure 6. \"Interaction plot between am and wt\"",
+             "Figure 7. \"Scatterplot of wt and mpg with color representing am\"",
+             "Figure 8. \"Residuals plot and residuals QQ plot\"")
+
+```
+
+```{r clean, echo=FALSE, results='hide', fig.show='hide', message=FALSE}
+# Do a little cleanup on the dataset to convert some of the variables
+# to factors from numeric.
+mtcars$am   <- factor(mtcars$am, labels = c("auto", "manual"))
+mtcars$cyl  <- as.factor(mtcars$cyl)
+mtcars$vs   <- as.factor(mtcars$vs)
+mtcars$gear <- as.factor(mtcars$gear)
+```
+
+### Executive Summary
+
+Motor Trend executives asked us to perform a study about the effect of transmission type on fuel efficiency.  We used data collected by Motor Trend to perform this analysis.  Unfortunately we found that the dataset couldn't help answer this question definitively due to a bias in the dataset towards lighter cars being manual transmissions and heavier cars being automatic transmissions and the finding that weight of the car played a more significant role in fuel efficiency than transmission type in the dataset.  Our recommendation is that Motor Trend not make any recommendations about transmission type and fuel efficiency without performing a more comprehensive study.
+
+### Introduction
+
+In this paper we examine the dataset *mtcars* to answer the following questions:
+
+- Is an automatic or manual transmission better for MPG?
+- Quantify the MPG difference between automatic and manual transmissions
+
+### Analysis
+
+```{r fits, echo=FALSE}
+# The fitted linear models we examine in this analysis
+slr.fit          <- lm(mpg ~ am, data = mtcars)
+step.fit         <- step(lm(mpg ~ ., data = mtcars), trace = 0)
+interactions.fit <- lm(mpg ~ am*wt + qsec, data = mtcars)
+```
+
+```{r slr, echo=FALSE}
+# A naive linear model to start
+slr.fit <- summary(lm(mpg ~ am, data = mtcars))
+# coefficient for am
+slope <- round(slr.fit$coef[2], 3)
+# R squared
+rsqr <- round(slr.fit$r.squared, 3)
+# p-value for am coefficient
+pv <- round(slr.fit$coef[2,4], 5)
+# NOTE: Need to convert pv to character or knitr errors out :-/
+pv <- as.character(pv)
+```
+
+We will use the dataset *mtcars* to analyze fuel efficiency measured in "miles per gallon" of various 1973-1974 models of automobiles and compare them by their transmission type (automatic or manual).  In the dataset, fuel efficiency is recorded in the *mpg* variable and transmission type is recorded in the *am* variable (an *am* value of 0 is an automatic transmission and an *am* value of 1 is a manual transmission).  The first six cases and a contingency table on *am* showing the distribution of automatic vs. manual transmissions are shown in `r figures[1]`
+
+The boxplot in `r figures[2]` shows that automobiles with manual transmissions tend to have better mpg than for automatic transmissions.
+
+Our strategy for determining which transmission is better for higher fuel efficiency and quantifying that difference will be to use a sucession of linear models comparing the adjusted $R^2$ for the models.  We start the investigation with a naive simple linear regression model where *mpg* is the response variable and *am* is the explanatory as shown in `r figures[3]`.  This simple model indicates that for manual transmissions we expect on average a higher *mpg* of `r slope` over automatic transmissions.  This model is a little too simple though, the $R^2$ for the model indicates that the model accounts for only `r rsqr*100`% of the variability in the data.  The p-value of `r pv` indicates that am is a significant predictor of mpg, but with such a low $R^2$ we should be able to find a model that accounts for more variability.
+
+```{r step, echo=FALSE}
+step.fit <- summary(step(lm(mpg ~ ., data = mtcars), trace = 0))
+# R squared
+rsqr <- round(step.fit$adj.r.squared, 3)
+wt.coef <- round(step.fit$coef[2], 2)
+```
+
+Next, we use the R step() function to find a better model, see `r figures[4]`.  This being a multi variable regression, we look at the adjusted $R^2$.  This model has an adjusted $R^2$ of `r rsqr`, accounting for `r round(rsqr, 2) * 100`% of the variability in the data.  This is a much better fit than the naive model.  The p-values for the estimates are all significant for a 0.05 signficance level.  We notice that in this model *wt* has a negative estimate.  This means that "for each 1000 lb. increase in *wt* we expect *mpg* to __decrease__ by `r abs(wt.coef)`".
+
+```{r interactions, echo=FALSE}
+summ.interactions.fit <- summary(interactions.fit)
+# R squared
+rsqr <- round(summ.interactions.fit$adj.r.squared, 3)
+```
+
+Knowing that *wt* contributes a negative influence on *mpg*, we wonder if *am* has any interaction with *wt* in the model.  We fit a new model including an interaction between *am* and *wt*, see `r figures[5]`.  This model has an adjusted $R^2$ of `r rsqr` meaning that `r rsqr * 100`% of the variance in the data is accounted for in the model.  Accordingly, this is a very good model of the data, but we notice a couple of characteristics that indicate this may not be a good model for showing that transmission type is a good indicator for fuel efficiency.  Note that the interaction of manual transmissions with weight (*ammanual:wt*) has a negative estimate.  We translate this as "all else held constant, automobiles with a manual transmission experience a decrease in fuel efficiency of `r round(summ.interactions.fit$coef[5, 1], 2)` for each unit increase in *wt*"
+
+The effects of this interaction are plotted in `r figures[6]`.  This interaction plot shows that `mpg` goes down faster for manual transmissions than for automatic transmissions as the weight of the automobile increases.  To interpret this, we look at the data a bit more carefully.  `r figures[7]` shows a plot of *mpg* vs. *wt* with the dots colored based on *am*.  Looking carefully at this plot we note that the vast majority of lighter cars, those less than 3000 lbs, are manual transmissions while the vast majority of cars above 3000 lbs are automatic transmissions.
+
+### Results
+
+The final linear model explained `r rsqr * 100`% of the variance in the data which makes it an interesting model nonetheless.  The diagnostic plots for the model are shown in `r figures[8]`.  The residuals plot shows us that the residuals are scattered randomly around the line indicating that we have homoscedasticity.  The QQ plot shows that our errors are fairly normal as well.  To interpret this model, we use the following equation for the model:
+
+Y = 9.72 + 14.08 * *ammanual* - 2.94 * *wt* + 1.02 * *qsec* - 4.14 * *ammanual:wt*
+
+Because of the interaction between *am* and *wt*, the cofficients for *wt* must be added for manual transmissions (holding *ammanual* to 1 for manual transmissions).  -2.94 - 4.14 is -7.08, so we say that for a 1000 lb increase in *wt* we expect *mpg* to decrease by 7.08 on average for a manual transmission all else held constant.
+
+When we are talking about automatic transmissions, *ammanual* is 0, so we interpet the interaction between *am* and *wt* for automatic transmissions by saying that for a 1000 lb increase in *wt* we expect *mpg* to decrease by 2.94 on average for an automatic transmission all else held constant.
+
+Note that as *wt* increases, *mpg* decreases and our model shows us that *mpg* decreases faster for manual transmissions (-7.08) than for automatic transmissions (-2.94), which is in agreement with our interactions plot.  But, as we know, the data has biases of lighter cars being manual transmissions and heavier cars being automatic transmissions.
+
+*qsec* has a comparatively simpler interpretation in this model.  On average, for each unit increase in *qsec*, we expect *mpg* to increase by 1.02.  This makes intuitive sense, cars that are a bit slower in accleration are generally thought of as being more fuel efficient.
+
+### Conclusion
+
+Based on our findings, we conclude that we cannot definitively say anything about transmission type on fuel efficiency because the transmission type in our dataset is biased toward lighter cars for manual transmissions and toward heavier cars for automatic transmissions.  In order to find a relationship between transmission type and fuel efficiency it is necessary to include in the study heavier cars with manual transmissions and lighter cars with automatic transmissions.
+
+### Appendix
+
+This document was produced in R Studio using knitr and R markdown.
+
+```{r sample, echo=FALSE, fig.cap='figure 1'}
+head(mtcars)
+table(mtcars$am)
+```
+`r figures[1]`
+
+```{r boxplot, echo=FALSE, results='hide', message=FALSE}
+ggplot(mtcars, aes(x = am, y = mpg)) +
+    geom_boxplot()
+```
+
+`r figures[2]`
+
+```{r print_slr, echo=FALSE}
+print(slr.fit$coef)
+```
+`r figures[3]`
+
+```{r print_step, echo=FALSE}
+print(step.fit$coef)
+```
+`r figures[4]`
+
+```{r print_int, echo=FALSE}
+print(summary(interactions.fit)$coef)
+```
+`r figures[5]`
+
+```{r effects, echo=FALSE}
+plot(effect("am:wt", interactions.fit), multiline = TRUE)
+```
+
+`r figures[6]`
+
+```{r mpg_weight_am, echo=FALSE}
+ggplot(mtcars, aes(x = wt, y = mpg, color = am)) +
+    geom_point()
+```
+
+`r figures[7]`
+
+```{r diag, echo=FALSE}
+p1<-ggplot(interactions.fit, aes(.fitted, .resid))+geom_point()
+p1<-p1+stat_smooth(method="loess")+geom_hline(yintercept=0, col="red", linetype="dashed")
+p1<-p1+xlab("Fitted values")+ylab("Residuals")
+p1<-p1+ggtitle("Residual vs Fitted Plot")+theme_bw()
+p1
+
+p2<-ggplot(interactions.fit, aes(qqnorm(.stdresid)[[1]], .stdresid))+geom_point(na.rm = TRUE)
+p2<-p2+geom_abline(aes(qqline(.stdresid)))+xlab("Theoretical Quantiles")+ylab("Standardized Residuals")
+p2<-p2+ggtitle("Normal Q-Q")+theme_bw()
+p2
+```
+
+`r figures[8]`
+
+```{r clean, echo=TRUE, results='hide'}
+```
+```{r fits, echo=TRUE, results='hide'}
+```
